@@ -34,7 +34,10 @@ class ObjectDetectionClient:
             return False
         else:
             img = bytes_to_ndarray(response.processed_image)
-            return img, response.x, response.y, response.color, response.angle
+            x = round(response.x, 2)
+            y = round(response.y, 2)
+            angle = round(response.angle, 2)
+            return img, x, y, response.color, angle
 
 class ObjectDetectionServer(object_detection_pb2_grpc.ObjectDetectionServerServicer):
     def __init__(self):
