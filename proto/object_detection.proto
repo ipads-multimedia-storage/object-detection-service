@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+service ObjectDetectionServer {
+  rpc upload(Image) returns (DetectionResult) {}
+}
+
+message Image {
+  bytes payload = 1;
+}
+
+message DetectionResult {
+  bool object_detected = 1;
+  Image processed_image = 2;
+  string color = 3;
+  float x = 4;
+  float y = 5;
+  float angle = 6;
+}

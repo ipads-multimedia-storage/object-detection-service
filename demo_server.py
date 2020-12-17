@@ -1,3 +1,3 @@
 import lib
 
-lib.ImageServer().start(30307)
+lib.ObjectDetectionServer().start(30307)

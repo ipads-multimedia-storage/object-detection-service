@@ -2,10 +2,10 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import image_pb2 as image__pb2
+import object_detection_pb2 as object__detection__pb2
 
 
-class ImageServerStub(object):
+class ObjectDetectionServerStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -15,13 +15,13 @@ class ImageServerStub(object):
             channel: A grpc.Channel.
         """
         self.upload = channel.unary_unary(
-                '/ImageServer/upload',
-                request_serializer=image__pb2.Image.SerializeToString,
-                response_deserializer=image__pb2.Reply.FromString,
+                '/ObjectDetectionServer/upload',
+                request_serializer=object__detection__pb2.Image.SerializeToString,
+                response_deserializer=object__detection__pb2.DetectionResult.FromString,
                 )
 
 
-class ImageServerServicer(object):
+class ObjectDetectionServerServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def upload(self, request, context):
@@ -31,21 +31,21 @@ class ImageServerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_ImageServerServicer_to_server(servicer, server):
+def add_ObjectDetectionServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'upload': grpc.unary_unary_rpc_method_handler(
                     servicer.upload,
-                    request_deserializer=image__pb2.Image.FromString,
-                    response_serializer=image__pb2.Reply.SerializeToString,
+                    request_deserializer=object__detection__pb2.Image.FromString,
+                    response_serializer=object__detection__pb2.DetectionResult.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'ImageServer', rpc_method_handlers)
+            'ObjectDetectionServer', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
  # This class is part of an EXPERIMENTAL API.
-class ImageServer(object):
+class ObjectDetectionServer(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
@@ -59,8 +59,8 @@ class ImageServer(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/ImageServer/upload',
-            image__pb2.Image.SerializeToString,
-            image__pb2.Reply.FromString,
+        return grpc.experimental.unary_unary(request, target, '/ObjectDetectionServer/upload',
+            object__detection__pb2.Image.SerializeToString,
+            object__detection__pb2.DetectionResult.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
