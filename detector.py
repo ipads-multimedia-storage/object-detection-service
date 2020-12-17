@@ -4,6 +4,8 @@ import cv2
 import math
 import numpy as np
 
+# filter used to detect color in LAB color space
+# XXX: but it seems too loose, it can be tighter
 color_range = {
     'red': [(0, 151, 100), (255, 255, 255)], 
     'green': [(0, 0, 0), (255, 115, 255)], 
@@ -12,7 +14,7 @@ color_range = {
     'white': [(193, 0, 0), (255, 250, 255)], 
 }
 
-range_rgb = {
+color_to_bgr = {
     'red':   (0, 0, 255),
     'blue':  (255, 0, 0),
     'green': (0, 255, 0),
@@ -22,23 +24,22 @@ range_rgb = {
 
 # size = (640, 480)
 size = (1080, 1440)
-__target_color = ('red', 'green', 'blue')
+target_color = ('red', 'green', 'blue')
 
 #找出面积最大的轮廓
 #参数为要比较的轮廓的列表
-def getAreaMaxContour(contours) :
-    contour_area_temp = 0
-    contour_area_max = 0
-    area_max_contour = None
+def get_max_contour_and_area(contours) :
+    max_contour = None
+    max_contour_area = 0
 
     for c in contours : #历遍所有轮廓
-        contour_area_temp = math.fabs(cv2.contourArea(c))  #计算轮廓面积
-        if contour_area_temp > contour_area_max:
-            contour_area_max = contour_area_temp
-            if contour_area_temp > 300:  #只有在面积大于300时，最大面积的轮廓才是有效的，以过滤干扰
-                area_max_contour = c
+        tmp = math.fabs(cv2.contourArea(c))  #计算轮廓面积
+        if tmp > max_contour_area:
+            max_contour_area = tmp
+            if tmp > 300:  #只有在面积大于300时，最大面积的轮廓才是有效的，以过滤干扰
+                max_contour = c
 
-    return area_max_contour, contour_area_max  #返回最大的轮廓
+    return max_contour, max_contour_area
 
 def getROI(box):
     x_min = min(box[0, 0], box[1, 0], box[2, 0], box[3, 0])
@@ -58,28 +59,28 @@ def detect(image):
     #     frame_gb = getMaskROI(frame_gb, roi, size)      
     frame_lab = cv2.cvtColor(frame_gb, cv2.COLOR_BGR2LAB)  # 将图像转换到LAB空间
 
-    # the color of the max contour
-    color_area_max = None
-    # the area of the max contour
-    max_area = 0
     # the max contour
-    areaMaxContour_max = 0
+    max_contour = None
+    # the color of the max contour
+    max_contour_color = None
+    # the area of the max contour
+    max_contour_area = 0
     
-    for i in color_range:
-        if i in __target_color:
-            frame_mask = cv2.inRange(frame_lab, color_range[i][0], color_range[i][1])  #对原图像和掩模进行位运算
-            opened = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, np.ones((6,6),np.uint8))  #开运算
-            closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, np.ones((6,6),np.uint8)) #闭运算
-            contours = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]  #找出轮廓
-            areaMaxContour, area_max = getAreaMaxContour(contours)  #找出最大轮廓
-            if areaMaxContour is not None:
-                if area_max > max_area:#找最大面积
-                    max_area = area_max
-                    color_area_max = i
-                    areaMaxContour_max = areaMaxContour
-    if max_area > 2500:  # 有找到最大面积
+    for color in target_color:
+        frame_mask = cv2.inRange(frame_lab, color_range[color][0], color_range[color][1])  #对原图像和掩模进行位运算
+        opened = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, np.ones((6,6),np.uint8))  #开运算
+        closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, np.ones((6,6),np.uint8)) #闭运算
+        contours = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]  #找出轮廓
+        max_contour_tmp, max_contour_area_tmp = get_max_contour_and_area(contours)  #找出最大轮廓
+        if max_contour_tmp is not None:
+            if max_contour_area_tmp > max_contour_area:
+                max_contour = max_contour_tmp
+                max_contour_color = color
+                max_contour_area = max_contour_area_tmp
+
+    if max_contour_area > 2500:  # 有找到最大面积
         # rect: [(center_x, center_y), (width, height), angle]
-        rect = cv2.minAreaRect(areaMaxContour_max)
+        rect = cv2.minAreaRect(max_contour)
         box = np.int0(cv2.boxPoints(rect))
         
         roi = getROI(box) #获取roi区域
@@ -91,11 +92,11 @@ def detect(image):
             
         # world_x, world_y = convertCoordinate(img_centerx, img_centery, size) #转换为现实世界坐标
         
-        cv2.drawContours(image, [box], -1, range_rgb[color_area_max], 2)
+        cv2.drawContours(image, [box], -1, color_to_bgr[max_contour_color], 2)
         cv2.imwrite("images/tmp.jpg", image)
         # cv2.putText(image, '(' + str(world_x) + ',' + str(world_y) + ')', (min(box[0, 0], box[2, 0]), box[2, 1] - 10),
-                # cv2.FONT_HERSHEY_SIMPLEX, 0.5, range_rgb[color_area_max], 1)  #绘制中心点
-        return image, img_centerx, img_centery, rect[2], color_area_max
-        # return image, world_x, world_y, rect[2], color_area_max
+                # cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_to_bgr[max_contour_color], 1)  #绘制中心点
+        return image, img_centerx, img_centery, rect[2], max_contour_color
+        # return image, world_x, world_y, rect[2], max_contour_color
     
     return False
