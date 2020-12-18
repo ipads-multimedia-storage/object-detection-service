@@ -79,7 +79,7 @@ def detect(image):
         cv2.putText(image, '(' + str(img_centerx) + ',' + str(img_centery) + ')',
             (min(box[0, 0], box[2, 0]), box[2, 1] - 10),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_to_bgr[max_contour_color], 1)  #绘制中心点
-        cv2.imwrite("images/tmp.jpg", image)
+        print('coord: ({}, {}), color: {}, angle: {}'.format(img_centerx, img_centery, max_contour_color, angle))
         return image, img_centerx, img_centery, angle, max_contour_color
     
     return False
